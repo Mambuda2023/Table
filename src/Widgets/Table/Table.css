@@ -1,0 +1,12 @@
+.input-table {
+  border: 1px solid rgb(94, 92, 92);
+  margin-bottom: 30px;
+  max-width: 400px;
+  width: 100%;
+}
+.sort-button:hover {
+  cursor: pointer;
+}
+.button-page:disabled {
+  background-color: rgba(94, 92, 92, 0.3);
+}
