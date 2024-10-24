@@ -1,54 +1,73 @@
-import { useEffect, useState } from "react";
-import { tableApi } from "../../app/services/table/table.services";
-// import Pagination from "../../shared/ui/Pagination/Pagination";
+import { memo, useEffect, useState } from "react";
 
 import DropDown from "../DropDown/DropDown";
 import "./Table.css";
+import axios from "axios";
+import Pagination from "./Pagination/Pagination";
 
 const Table = () => {
-  const [page, setPage] = useState(1);
-  const { data: table, isError, isLoading } = tableApi.useGetTableQuery(page);
-  const { data: sortBody } = tableApi.useSortTableQuery("body", "desc", page);
-  const { data: sortTitle } = tableApi.useSortTableQuery("title", "desc", page);
-  const { data: filterTable } = tableApi.useFiltrationTableQuery("");
   const [tableData, setTableData] = useState([]);
-  // console.log(table?.last);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [postsPerPage] = useState(10);
+  const [value, setValue] = useState("");
   useEffect(() => {
-    setTableData(table?.data);
-  }, [table?.data]);
+    const getPosts = async () => {
+      setLoading(true);
+      const res = await axios.get("https://jsonplaceholder.typicode.com/posts");
+      setTableData(res.data);
+      setLoading(false);
+    };
+    getPosts();
+  }, []);
 
-  const handleSortTitle = () => {
-    setTableData(sortTitle);
+  const handleSortTitle = () => {};
+  const handleSortReset = () => {};
+  const handleSortBody = () => {};
+  // const handleFilter = tableData.filter((post) => {
+  //   return post.title.toLowerCase().includes(value);
+  // });
+
+  //Pagination
+  const indexOfLastPosts = currentPage * postsPerPage;
+  const indexOfFirstPosts = indexOfLastPosts - postsPerPage;
+  let currentPosts = tableData
+    .slice(indexOfFirstPosts, indexOfLastPosts)
+    .filter((post) => {
+      return post.title.toLowerCase().includes(value.toLowerCase());
+    });
+  const pagination = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+  const prevPage = () => {
+    if (currentPage <= 1) {
+      setCurrentPage(indexOfLastPosts + 1);
+    }
+    setCurrentPage((prev) => prev - 1);
+  };
+  const nextPage = (event) => {
+    if (currentPage === indexOfLastPosts) {
+      setCurrentPage(currentPage);
+    }
+    setCurrentPage((prev) => prev + 1);
   };
 
-  const handleSortBody = () => {
-    setTableData(sortBody);
-  };
-
-  const handleSortReset = () => {
-    setTableData(table?.data);
-  };
-  const handleFilter = () => {};
-
-  if (isLoading) {
-    return <div>Loading</div>;
+  //pagination
+  if (loading) {
+    <h2>Загрузка...</h2>;
   }
-
-  if (!table) {
-    return <div>No posts :</div>;
-  }
-
-  if (isError) return <h2>Не удалось получить данные</h2>;
-
   return (
     <>
       <div className="box">
         {/* Фильтрация */}
         <input
+          value={value}
           type="text"
           className="input-table p-2 rounded-2 "
           placeholder="Фильтровать"
-          onChange={handleFilter}
+          onChange={(event) => {
+            setValue(event.target.value);
+          }}
         />
         {/* Выпадающее меню */}
         <DropDown
@@ -57,63 +76,48 @@ const Table = () => {
           handleSortReset={handleSortReset}
         />
       </div>
-      {/* Таблица */}
-      {isLoading ? (
-        <h2>Загрузка...</h2>
-      ) : (
-        <>
-          <table className="table mb-4">
-            <thead>
-              <tr>
-                <th scope="col">#</th>
-                <th scope="col">Title</th>
-                <th scope="col">Description</th>
+      <>
+        <table className="table mb-4">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Title</th>
+              <th scope="col">Description</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {currentPosts?.map((item) => (
+              <tr key={item.id}>
+                <th scope="row">{item.id}</th>
+                <td>{item.title}</td>
+                <td>{item.body}</td>
               </tr>
-            </thead>
-
-            <tbody>
-              {tableData?.map((item) => (
-                <tr key={item.id}>
-                  <th scope="row">{item.id}</th>
-                  <td>{item.title}</td>
-                  <td>{item.body}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {/* <Pagination /> */}
-
-          <div className="d-flex gap-3 justify-content-between pt-2 pb-3">
-            <button
-              className="p-3 bg-secondary rounded-2 button-page text-white"
-              onClick={(event) => {
-                if (table?.prev === null) {
-                  event.target.setAttribute("disabled", true);
-                } else {
-                  event.target.removeAttribute("disabled");
-                  setPage(page - 1);
-                }
-              }}
-            >
-              Previous
-            </button>
-            <button
-              className="p-3 bg-secondary rounded-2 button-page text-white"
-              onClick={(event) => {
-                if (table.next === null) {
-                  event.target.setAttribute("disabled", true);
-                } else {
-                  event.target.removeAttribute("disabled");
-                  setPage(page + 1);
-                }
-              }}
-            >
-              Next
-            </button>
-          </div>
-        </>
-      )}
+            ))}
+          </tbody>
+        </table>
+        {/* <Pagination /> */}
+        <Pagination
+          pagination={pagination}
+          postsPerPage={postsPerPage}
+          currentPosts={tableData.length}
+        />
+        <div className="d-flex gap-3 justify-content-between">
+          <button
+            className="bg-secondary p-2 rounded-2 text-white"
+            onClick={prevPage}
+          >
+            prev
+          </button>
+          <button
+            className="bg-secondary p-2 rounded-2 text-white"
+            onClick={nextPage}
+          >
+            next
+          </button>
+        </div>
+      </>
     </>
   );
 };
-export default Table;
+export default memo(Table);
